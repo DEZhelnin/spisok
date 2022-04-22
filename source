@@ -1,0 +1,203 @@
+#include <iostream>
+#include "list.h"
+#include <fstream>
+#include <string>
+using namespace std;
+
+bool is_unique(elem*& list, char* val);
+bool is_not_empty(ifstream& itext);
+bool check_if_pos(char* value);
+void show_content();
+void show_menu();
+
+int main()
+{
+    setlocale(LC_ALL, "Russian");
+    cout << "Content-type: text/html; charset=Windows-1251\n\n";
+    ifstream f("_index");
+    if (f.is_open())
+    {
+        auto sz = 65536;
+        auto buf = new char[sz];
+        while (!f.eof())
+        {
+            f.getline(buf, sz);
+            if (strcmp(buf, "<!--#header#-->") == 0)
+            {
+                cout << "<h1 class='title'>Список</h1>";
+            }
+            if (strcmp(buf, "<!--#menu#-->") == 0)
+            {
+                show_menu();
+            }
+            if (strcmp(buf, "<!--#content#-->") == 0)
+            {
+                show_content();
+            }
+
+            cout << buf;
+        }
+        delete[] buf;
+        f.close();
+    }
+    else
+    {
+        cout << "Проблемы с cgi";
+    }
+}
+void clear_file() {
+    ofstream f("text.txt");
+    if (f.is_open())
+    {
+        f.clear();
+    }
+    f.close();
+ }
+bool is_unique(elem*& list, char* val) {
+    if (!list)
+    {
+        return true;
+    }
+    else
+    {
+        elem* curr = list;
+        while (curr->next)
+        {
+            if (curr->a == atoi(val))
+            {
+                return false;
+            }
+            curr = curr->next;
+        }
+        if (curr->a != atoi(val)) {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+}
+
+void show_menu()
+{
+    ifstream f("menu");
+    if (f.is_open())
+    {
+        auto sz = 1024;
+        auto buf = new char[sz];
+        while (!f.eof())
+        {
+            f.getline(buf, sz);
+            char* name;
+            char* addrr = strtok_s(buf, " ", &name);
+            cout << "<div class='menu-item'>"
+                "<a href='" << addrr << "'>" <<
+                name << "</a>"
+                "</div>";
+        }
+    }
+    f.close();
+}
+bool is_not_empty(ifstream& f) {
+    long file_size;
+    f.seekg(0, ios::end);
+    file_size = f.tellg();
+    if (file_size == 0)
+    {
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
+}
+
+bool check_if_pos(char* value)
+{
+    for (int i = 1; i < strlen(value) - 1; i++)
+    {
+        if (value[i] == ' ' && value[i - 1] != ' ' && value[i + 1] != ' ') return false;
+    }
+    return true;
+}
+
+bool check_if_nulls(char* value)
+{
+    for (int i = 0; i < strlen(value) - 1; i++)
+    {
+        if (value[i] == '0' && value[i + 1] == '0' ) return false;
+    }
+    return true;
+}
+void show_content()
+{
+    elem* list = new elem;
+    cout << "<form method='get' action='second.cgi'>";
+    cout << "<input type='text' class='enter' name='list' placeholder='Введите значения'>";
+    cout << "<input type='submit' value='Отправить' class='button'></input>";
+    cout << "</form>";
+    cout << "Чтобы очистить список, введите '00'";
+    cout << "<h2 class = 'result'>Список : </h2>";
+    cout << "<div class = 'output'></div>";
+    char* data = nullptr;
+    get_form_data(data);
+    char* check = nullptr;
+    ifstream f("text.txt", ios_base::in);
+    if ((data && strlen(data)) > 0)
+    {
+        char* value = nullptr;
+        get_param_value(value, "list", data);
+        int temp;
+        if (!check_if_nulls(value)) clear_file();
+        else if (check_if_pos(value)) {
+            ofstream w("text.txt", ios_base::app);
+            if (is_not_empty(f)) {
+                f.seekg(0, ios::beg);
+                while (!f.eof()) {
+                    f >> temp;
+                    add(list, temp);
+                }
+                f.close();
+            }
+            if (is_unique(list, value)) {
+                add(list, atoi(value));
+                w << " " << atoi(value);
+            }
+            w.close();
+
+            if (list) {
+                show_list(list);
+            }
+        }
+        else
+        {
+            if (is_not_empty(f)) {
+                f.seekg(0, ios::beg);
+                while (!f.eof()) {
+                    f >> temp;
+                    add(list, temp);
+                }
+                f.close();
+            }
+            ofstream w("text.txt");
+            char* context = nullptr;
+            char* number = strtok_s(context, " ", &value);
+            if (is_unique(list, number)) {
+                insert(list, atoi(number), atoi(value) + 1);
+            }
+            elem* curr = list->next;
+            while (curr)
+            {
+                w << " " << curr->a;
+                curr = curr->next;
+            }
+            w.close();
+            show_list(list);
+        }
+    }
+    else {
+        cout << "Список еще пуст";
+    }
+    delete[] data;
+}
